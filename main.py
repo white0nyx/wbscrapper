@@ -39,12 +39,45 @@ class WBScrapper:
             with open('all_catalog.json', 'w', encoding='utf-8') as file:
                 json.dump(response, file, indent=4, ensure_ascii=False)
 
+        if crt_db:
+            with sqlite3.connect('products_database.db') as con:
+                cur = con.cursor()
+
+                cur.execute("""DROP TABLE IF EXISTS products""")
+
+                cur.execute("""CREATE TABLE IF NOT EXISTS products (
+                            __sort INTEGER,
+                            k_sort INTEGER,
+                            time1 INTEGER,
+                            time2 INTEGER,
+                            id INTEGER,
+                            root INTEGER,
+                            kindId INTEGER,
+                            subjectId INTEGER,
+                            subjectParentId INTEGER,
+                            parent_category TEXT,
+                            child_category TEXT,
+                            name TEXT,
+                            brand TEXT,
+                            brandId INTEGER,
+                            siteBrandId INTEGER,
+                            sale INTEGER,
+                            priceU REAL,
+                            salePriceU REAL,
+                            pics INTEGER,
+                            rating INTEGER,
+                            feedbacks INTEGER,
+                            panelPromoId INTEGER,                      
+                            promoTextCat TEXT,
+                            link TEXT
+                            )""")
+
         with open('products.csv', 'w', encoding='utf-8-sig', newline='') as file:
             writer = csv.writer(file, delimiter=';')
             writer.writerow(('__sort', 'k_sort', 'time1', 'time2', 'id', 'root', 'kindId', 'subjectId',
                              'subjectParentId', 'parent_category', 'child_category', 'name', 'brand', 'brandId',
                              'siteBrandId', 'sale', 'priceU', 'salePriceU', 'pics', 'rating', 'feedbacks',
-                             'panelPromoId', 'promoTextCat'))
+                             'panelPromoId', 'promoTextCat', 'link'))
 
     def get_data_from_page(self, url_request, parent_category, child_category):
         """Получение данных с одной страницы"""
@@ -141,6 +174,6 @@ if __name__ == '__main__':
     user_choice = input().strip()
     pages = int(input('Укажите количество страниц, которое необходимо получить с каждой категории: '))
 
-    wbs = WBScrapper(user_choice)
+    wbs = WBScrapper(user_choice, crt_db=True)
 
     wbs.get_data_from_pages(pages)

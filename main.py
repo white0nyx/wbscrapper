@@ -3,7 +3,7 @@ import requests
 import json
 import csv
 from art import tprint
-from os.path import exists
+import sqlite3
 
 
 class WBScrapper:
@@ -25,7 +25,7 @@ class WBScrapper:
     MIDDLE_OF_LINK = '/catalog?appType=1&couponsGeo=12,3,18,15,21&curr=rub&dest=-1029256,-102269,-2162196,-1257786&emp=0&lang=ru&locale=ru&page='
     FINISH_OF_LINK = '&pricemarginCoeff=1.0&reg=0&regions=68,64,83,4,38,80,33,70,82,86,75,30,69,22,66,31,40,1,48,71&sort=popular&spp=0&'
 
-    def __init__(self, categories, crt_all_catalog=False):
+    def __init__(self, categories, crt_all_catalog=False, crt_db=False):
         """Инициализация объекта парсера"""
 
         response = requests.get('https://www.wildberries.ru/webapi/menu/main-menu-ru-ru.json',
@@ -42,8 +42,9 @@ class WBScrapper:
         with open('products.csv', 'w', encoding='utf-8-sig', newline='') as file:
             writer = csv.writer(file, delimiter=';')
             writer.writerow(('__sort', 'k_sort', 'time1', 'time2', 'id', 'root', 'kindId', 'subjectId',
-                             'subjectParentId', 'name', 'brand', 'brandId', 'siteBrandId', 'sale', 'priceU',
-                             'salePriceU', 'pics', 'rating', 'feedbacks', 'panelPromoId', 'promoTextCat'))
+                             'subjectParentId', 'parent_category', 'child_category', 'name', 'brand', 'brandId',
+                             'siteBrandId', 'sale', 'priceU', 'salePriceU', 'pics', 'rating', 'feedbacks',
+                             'panelPromoId', 'promoTextCat'))
 
     def get_data_from_page(self, url_request, parent_category, child_category):
         """Получение данных с одной страницы"""

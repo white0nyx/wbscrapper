@@ -45,7 +45,7 @@ class WBScrapper:
                              'subjectParentId', 'name', 'brand', 'brandId', 'siteBrandId', 'sale', 'priceU',
                              'salePriceU', 'pics', 'rating', 'feedbacks', 'panelPromoId', 'promoTextCat'))
 
-    def get_data_from_page(self, url_request):
+    def get_data_from_page(self, url_request, parent_category, child_category):
         """Получение данных с одной страницы"""
 
         response = requests.get(url=url_request,
@@ -90,9 +90,9 @@ class WBScrapper:
                 writer = csv.writer(file, delimiter=';')
                 writer.writerow(
                     (
-                        __sort, k_sort, time1, time2, id, root, kindId, subjectId, subjectParentId, name, brand,
-                        brandId, siteBrandId, sale, priceU, salePriceU, pics, rating, feedbacks, panelPromoId,
-                        promoTextCat, link
+                        __sort, k_sort, time1, time2, id, root, kindId, subjectId, subjectParentId, parent_category,
+                        child_category, name, brand, brandId, siteBrandId, sale, priceU, salePriceU, pics, rating,
+                        feedbacks, panelPromoId, promoTextCat, link
                     ))
 
     def get_child_categories(self):
@@ -117,7 +117,7 @@ class WBScrapper:
             for page in range(1, pages + 1):
                 req_url = child_category['first_part'] + str(page) + child_category['final_part']
 
-                self.get_data_from_page(req_url)
+                self.get_data_from_page(req_url, child_category['parent_category'], child_category['child_category'])
             print(child_category['parent_category'], child_category['child_category'], 'is_ready')
             time.sleep(0.01)
 

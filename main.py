@@ -34,6 +34,8 @@ class WBScrapper:
         self.catalog = response
         self.categories = list(map(int, categories.split()))
         self.categories = [num - 1 for num in self.categories]
+        self.crt_all_catalog = crt_all_catalog
+        self.crt_db = crt_db
 
         if crt_all_catalog:
             with open('all_catalog.json', 'w', encoding='utf-8') as file:
@@ -120,14 +122,18 @@ class WBScrapper:
 
             link = f"https://www.wildberries.ru/catalog/{id}/detail.aspx?targetUrl=GP"
 
+            all_data = (__sort, k_sort, time1, time2, id, root, kindId, subjectId, subjectParentId, parent_category,
+                        child_category, name, brand, brandId, siteBrandId, sale, priceU, salePriceU, pics, rating,
+                        feedbacks, panelPromoId, promoTextCat, link)
+
             with open('products.csv', 'a', encoding='utf-8-sig', newline='') as file:
                 writer = csv.writer(file, delimiter=';')
-                writer.writerow(
-                    (
-                        __sort, k_sort, time1, time2, id, root, kindId, subjectId, subjectParentId, parent_category,
-                        child_category, name, brand, brandId, siteBrandId, sale, priceU, salePriceU, pics, rating,
-                        feedbacks, panelPromoId, promoTextCat, link
-                    ))
+                writer.writerow(all_data)
+
+            if self.crt_db:
+                with sqlite3.connect('products_database.db') as con:
+                    cur = con.cursor()
+                    cur.execute(f"""INSERT INTO products VALUES ({str('?, '* 24)[:-2]})""", all_data)
 
     def get_child_categories(self):
         """Получение списка, содержащего две части для формирования ссылки для каждой подкатегории"""
@@ -153,7 +159,7 @@ class WBScrapper:
 
                 self.get_data_from_page(req_url, child_category['parent_category'], child_category['child_category'])
             print(child_category['parent_category'], child_category['child_category'], 'is_ready')
-            time.sleep(0.01)
+            # time.sleep(2)
 
 
 if __name__ == '__main__':

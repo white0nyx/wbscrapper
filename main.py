@@ -45,7 +45,7 @@ class WBScrapper:
             with sqlite3.connect('products_database.db') as con:
                 cur = con.cursor()
 
-                # cur.execute("""DROP TABLE IF EXISTS products""")
+                cur.execute("""DROP TABLE IF EXISTS products""")
 
                 cur.execute("""CREATE TABLE IF NOT EXISTS products (
                             __sort INTEGER,
@@ -78,7 +78,8 @@ class WBScrapper:
         with open('products.csv', 'w', encoding='utf-8-sig', newline='') as file:
             writer = csv.writer(file, delimiter=';')
             writer.writerow(('__sort', 'k_sort', 'time1', 'time2', 'id', 'root', 'kindId', 'subjectId',
-                             'subjectParentId', 'main_category', 'middle_category', 'child_category', 'name', 'brand', 'brandId',
+                             'subjectParentId', 'main_category', 'middle_category', 'child_category', 'name', 'brand',
+                             'brandId',
                              'siteBrandId', 'sale', 'priceU', 'salePriceU', 'pics', 'rating', 'feedbacks',
                              'panelPromoId', 'promoTextCat', 'link'))
 
@@ -134,36 +135,37 @@ class WBScrapper:
             if self.crt_db:
                 with sqlite3.connect('products_database.db') as con:
                     cur = con.cursor()
-                    cur.execute(f"""INSERT INTO products VALUES ({str('?, '* 25)[:-2]})""", all_data)
+                    cur.execute(f"""INSERT INTO products VALUES ({str('?, ' * 25)[:-2]})""", all_data)
 
     def get_child_categories(self):
         """Получение списка, содержащего две части для формирования ссылки для каждой подкатегории"""
 
-        all_child_categories = []
-        for category in self.categories:
-            category_name = self.catalog[category]['name']
-            for child in self.catalog[category]['childs']:
+        all_categories = []
+        for main_category in self.categories:
+            main_category_name = self.catalog[main_category]['name']
+            for middle_category in self.catalog[main_category]['childs']:
 
-                if 'childs' in child:
-                    for child2 in child['childs']:
-                        all_child_categories.append(
+                if 'childs' in middle_category:
+                    for child_category in middle_category['childs']:
+                        all_categories.append(
                             {
-                                'parent_category': category_name,
-                                'middle_category': child['name'],
-                                'child_category': child2['name'],
-                                'first_part': self.START_OF_LINK + child2['shard'] + self.MIDDLE_OF_LINK,
-                                'final_part': self.FINISH_OF_LINK + child2['query']
+                                'main_category': main_category_name,
+                                'middle_category': middle_category['name'],
+                                'child_category': child_category['name'],
+                                'first_part': self.START_OF_LINK + child_category['shard'] + self.MIDDLE_OF_LINK,
+                                'final_part': self.FINISH_OF_LINK + child_category['query']
                             })
 
                 else:
-                    all_child_categories.append(
+
+                    all_categories.append(
                         {
-                            'parent_category': category_name,
-                            'child_category': child['name'],
-                            'first_part': self.START_OF_LINK + child['shard'] + self.MIDDLE_OF_LINK,
-                            'final_part': self.FINISH_OF_LINK + child['query']
+                            'main_category': main_category_name,
+                            'child_category': middle_category['name'],
+                            'first_part': self.START_OF_LINK + middle_category['shard'] + self.MIDDLE_OF_LINK,
+                            'final_part': self.FINISH_OF_LINK + middle_category['query']
                         })
-        return all_child_categories
+        return all_categories
 
     def get_data_from_pages(self, pages):
         for child_category in self.get_child_categories():
@@ -171,13 +173,15 @@ class WBScrapper:
                 req_url = child_category['first_part'] + str(page) + child_category['final_part']
 
                 if 'middle_category' in child_category:
-                    self.get_data_from_page(req_url, child_category['parent_category'], child_category['middle_category'],
+                    self.get_data_from_page(req_url, child_category['main_category'],
+                                            child_category['middle_category'],
                                             child_category['child_category'])
-                    print(child_category['parent_category'], child_category['middle_category'],
+                    print(child_category['main_category'], child_category['middle_category'],
                           child_category['child_category'], 'is_ready')
                 else:
-                    self.get_data_from_page(req_url, child_category['parent_category'], child_category['child_category'])
-                    print(child_category['parent_category'], child_category['child_category'], 'is_ready')
+                    self.get_data_from_page(req_url, child_category['main_category'],
+                                            child_category['child_category'])
+                    print(child_category['main_category'], child_category['child_category'], 'is_ready')
             # time.sleep(2)
 
 
@@ -185,7 +189,8 @@ if __name__ == '__main__':
     tprint('WBScrapper')
     print('Добро пожаловать в программу для парсинга интернет магазина www.wildberries.ru\n')
     print('Выберите категории: (Запишите номера категорий через пробел)')
-    print('1.  Женщинам                 11. Продукты                21. Алкоголь                31. Региональные товары')
+    print(
+        '1.  Женщинам                 11. Продукты                21. Алкоголь                31. Региональные товары')
     print('2.  Обувь                    12. Бытовая техника         22. Сад и дача              32. Вкусы России')
     print('3.  Детям                    13. Зоотовары               23. Здоровье')
     print('4.  Мужчинам                 14. Спорт                   24. Канцтовары')

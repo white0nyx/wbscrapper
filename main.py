@@ -60,6 +60,7 @@ class WBScrapper:
                             main_category TEXT,
                             middle_category TEXT,
                             child_category TEXT,
+                            second_childs_category TEXT,
                             name TEXT,
                             brand TEXT,
                             brandId INTEGER,
@@ -78,12 +79,11 @@ class WBScrapper:
         with open('products.csv', 'w', encoding='utf-8-sig', newline='') as file:
             writer = csv.writer(file, delimiter=';')
             writer.writerow(('__sort', 'k_sort', 'time1', 'time2', 'id', 'root', 'kindId', 'subjectId',
-                             'subjectParentId', 'main_category', 'middle_category', 'child_category', 'name', 'brand',
-                             'brandId',
-                             'siteBrandId', 'sale', 'priceU', 'salePriceU', 'pics', 'rating', 'feedbacks',
-                             'panelPromoId', 'promoTextCat', 'link'))
+                             'subjectParentId', 'main_category', 'middle_category', 'child_category',
+                             'second_childs_category', 'name', 'brand', 'brandId', 'siteBrandId', 'sale', 'priceU',
+                             'salePriceU', 'pics', 'rating', 'feedbacks', 'panelPromoId', 'promoTextCat', 'link'))
 
-    def get_data_from_page(self, url_request, main_category, child_category, middle_category=None):
+    def get_data_from_page(self, url_request, main_category, middle_category=None, child_category=None, second_childs_category=None):
         """Получение данных с одной страницы"""
 
         response = requests.get(url=url_request,
@@ -125,8 +125,8 @@ class WBScrapper:
             link = f"https://www.wildberries.ru/catalog/{id}/detail.aspx?targetUrl=GP"
 
             all_data = (__sort, k_sort, time1, time2, id, root, kindId, subjectId, subjectParentId, main_category,
-                        child_category, middle_category, name, brand, brandId, siteBrandId, sale, priceU, salePriceU,
-                        pics, rating, feedbacks, panelPromoId, promoTextCat, link)
+                        middle_category, child_category, second_childs_category, name, brand, brandId, siteBrandId,
+                        sale, priceU, salePriceU, pics, rating, feedbacks, panelPromoId, promoTextCat, link)
 
             with open('products.csv', 'a', encoding='utf-8-sig', newline='') as file:
                 writer = csv.writer(file, delimiter=';')
@@ -135,7 +135,7 @@ class WBScrapper:
             if self.crt_db:
                 with sqlite3.connect('products_database.db') as con:
                     cur = con.cursor()
-                    cur.execute(f"""INSERT INTO products VALUES ({str('?, ' * 25)[:-2]})""", all_data)
+                    cur.execute(f"""INSERT INTO products VALUES ({str('?, ' * len(all_data))[:-2]})""", all_data)
 
     def get_child_categories(self):
         """Получение списка, содержащего две части для формирования ссылки для каждой подкатегории"""
@@ -146,15 +146,31 @@ class WBScrapper:
             for middle_category in self.catalog[main_category]['childs']:
 
                 if 'childs' in middle_category:
+
                     for child_category in middle_category['childs']:
-                        all_categories.append(
-                            {
-                                'main_category': main_category_name,
-                                'middle_category': middle_category['name'],
-                                'child_category': child_category['name'],
-                                'first_part': self.START_OF_LINK + child_category['shard'] + self.MIDDLE_OF_LINK,
-                                'final_part': self.FINISH_OF_LINK + child_category['query']
-                            })
+
+                        if 'childs' in child_category:
+
+                            for second_child_category in child_category['childs']:
+                                all_categories.append(
+                                    {
+                                        'main_category': main_category_name,
+                                        'middle_category': middle_category['name'],
+                                        'child_category': child_category['name'],
+                                        'second_child_category': second_child_category['name'],
+                                        'first_part': self.START_OF_LINK + second_child_category['shard'] + self.MIDDLE_OF_LINK,
+                                        'final_part': self.FINISH_OF_LINK + second_child_category['query']
+                                    })
+
+                        else:
+                            all_categories.append(
+                                {
+                                    'main_category': main_category_name,
+                                    'middle_category': middle_category['name'],
+                                    'child_category': child_category['name'],
+                                    'first_part': self.START_OF_LINK + child_category['shard'] + self.MIDDLE_OF_LINK,
+                                    'final_part': self.FINISH_OF_LINK + child_category['query']
+                                })
 
                 else:
 
@@ -172,7 +188,13 @@ class WBScrapper:
             for page in range(1, pages + 1):
                 req_url = child_category['first_part'] + str(page) + child_category['final_part']
 
-                if 'middle_category' in child_category:
+                if 'second_child_category' in child_category:
+                    self.get_data_from_page(req_url, child_category['main_category'], child_category['middle_category'],
+                                            child_category['child_category'], child_category['second_child_category'])
+                    print(child_category['main_category'], child_category['middle_category'],
+                          child_category['child_category'], child_category['second_child_category'],'is_ready')
+
+                elif 'middle_category' in child_category:
                     self.get_data_from_page(req_url, child_category['main_category'],
                                             child_category['middle_category'],
                                             child_category['child_category'])
@@ -189,8 +211,7 @@ if __name__ == '__main__':
     tprint('WBScrapper')
     print('Добро пожаловать в программу для парсинга интернет магазина www.wildberries.ru\n')
     print('Выберите категории: (Запишите номера категорий через пробел)')
-    print(
-        '1.  Женщинам                 11. Продукты                21. Алкоголь                31. Региональные товары')
+    print('1.  Женщинам                 11. Продукты                21. Алкоголь                31. Региональные товары')
     print('2.  Обувь                    12. Бытовая техника         22. Сад и дача              32. Вкусы России')
     print('3.  Детям                    13. Зоотовары               23. Здоровье')
     print('4.  Мужчинам                 14. Спорт                   24. Канцтовары')
